@@ -12,7 +12,13 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include <iostream>
+#endif
+
+#include <string>
 
 namespace roboost
 {
@@ -23,14 +29,14 @@ namespace roboost
         class Logger
         {
         public:
-            virtual void info(const String& message) = 0;
-            virtual void warn(const String& message) = 0;
-            virtual void error(const String& message) = 0;
-            virtual void debug(const String& message) = 0;
+            virtual void info(const std::string& message) = 0;
+            virtual void warn(const std::string& message) = 0;
+            virtual void error(const std::string& message) = 0;
+            virtual void debug(const std::string& message) = 0;
             virtual ~Logger() {}
         };
 
-        // SerialLogger singleton
+#ifdef ARDUINO
         class SerialLogger : public Logger
         {
         private:
@@ -50,7 +56,7 @@ namespace roboost
                 return instance;
             }
 
-            void info(const String& message) override
+            void info(const std::string& message) override
             {
                 serial.print("[INFO] ");
                 serial.println(message);
@@ -62,18 +68,45 @@ namespace roboost
                 serial.println(message);
             }
 
-            void error(const String& message) override
+            void error(const std::string& message) override
             {
                 serial.print("[ERROR] ");
                 serial.println(message);
             }
 
-            void debug(const String& message) override
+            void debug(const std::string& message) override
             {
                 serial.print("[DEBUG] ");
                 serial.println(message);
             }
         };
+#else
+        class ConsoleLogger : public Logger
+        {
+        private:
+            // Private constructor
+            ConsoleLogger() {}
+
+            // Prevent copying and assignment
+            ConsoleLogger(const ConsoleLogger&) = delete;
+            ConsoleLogger& operator=(const ConsoleLogger&) = delete;
+
+        public:
+            static ConsoleLogger& getInstance()
+            {
+                static ConsoleLogger instance;
+                return instance;
+            }
+
+            void info(const std::string& message) override { std::cout << "[INFO] " << message << std::endl; }
+
+            void warn(const std::string& message) override { std::cout << "[WARN] " << message << std::endl; }
+
+            void error(const std::string& message) override { std::cerr << "[ERROR] " << message << std::endl; }
+
+            void debug(const std::string& message) override { std::cout << "[DEBUG] " << message << std::endl; }
+        };
+#endif // ARDUINO
 
     }; // namespace logging
 };     // namespace roboost

@@ -26,9 +26,9 @@ float LowPassFilter::update(float input)
 
 void LowPassFilter::reset() { output_ = 0.0f; }
 
-float LowPassFilter::get_cutoff_frequency() { return cutoff_frequency_; }
+float LowPassFilter::get_cutoff_frequency() const { return cutoff_frequency_; }
 
-float LowPassFilter::get_sampling_time() { return sampling_time_; }
+float LowPassFilter::get_sampling_time() const { return sampling_time_; }
 
 void LowPassFilter::set_cutoff_frequency(float cutoff_frequency)
 {

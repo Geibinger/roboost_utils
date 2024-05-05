@@ -51,11 +51,11 @@ void PIDController::reset()
     derivative_filter_.reset();
 }
 
-double PIDController::get_kp() { return kp_; }
+double PIDController::get_kp() const { return kp_; }
 
-double PIDController::get_ki() { return ki_; }
+double PIDController::get_ki() const { return ki_; }
 
-double PIDController::get_kd() { return kd_; }
+double PIDController::get_kd() const { return kd_; }
 
 void PIDController::set_kp(double kp) { kp_ = kp; }
 

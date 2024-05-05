@@ -12,7 +12,6 @@
 #ifndef CONTROLLERS_H
 #define CONTROLLERS_H
 
-#include <Arduino.h>
 #include <roboost/utils/constants.h>
 #include <roboost/utils/filters.hpp>
 #include <roboost/utils/timing.hpp>
@@ -60,35 +59,35 @@ namespace roboost
              *
              * @return double The proportional gain.
              */
-            double get_kp();
+            double get_kp() const;
 
             /**
              * @brief Get the integral gain.
              *
              * @return double The integral gain.
              */
-            double get_ki();
+            double get_ki() const;
 
             /**
              * @brief Get the derivative gain.
              *
              * @return double The derivative gain.
              */
-            double get_kd();
+            double get_kd() const;
 
             /**
              * @brief Get the maximum expected sampling time.
              *
              * @return double The maximum expected sampling time.
              */
-            double get_max_expected_sampling_time();
+            double get_max_expected_sampling_time() const;
 
             /**
              * @brief Get the maximum integral.
              *
              * @return double The maximum integral.
              */
-            double get_max_integral();
+            double get_max_integral() const;
 
             /**
              * @brief Set the proportional gain.

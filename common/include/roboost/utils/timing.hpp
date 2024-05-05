@@ -12,9 +12,22 @@
 #ifndef TIMING_HPP
 #define TIMING_HPP
 
+#ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include <chrono>
+
+inline unsigned long micros()
+{
+    static auto start = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(now - start).count();
+}
+#endif
+
 #include <functional>
 #include <limits.h>
+#include <roboost/utils/logging.hpp>
 #include <vector>
 
 #define TIMING_MS_TO_US(milliseconds) ((milliseconds)*1000LL)
@@ -114,7 +127,7 @@ namespace roboost
             unsigned long getDeltaTime() const { return deltaTime_; }
 
         private:
-            TimingService() : lastUpdateTime_(0) { Serial.println("TimingService initialized"); }
+            TimingService() : lastUpdateTime_(0), deltaTime_(0), logger_(roboost::logging::ConsoleLogger::getInstance()) {}
 
             void updateTasks(unsigned long currentTime)
             {
@@ -127,6 +140,7 @@ namespace roboost
             unsigned long lastUpdateTime_;
             std::vector<Task> tasks_;
             unsigned long deltaTime_;
+            roboost::logging::Logger& logger_;
         };
 
         /**

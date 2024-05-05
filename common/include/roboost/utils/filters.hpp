@@ -77,14 +77,14 @@ namespace roboost
              *
              * @return float The cutoff frequency.
              */
-            float get_cutoff_frequency();
+            float get_cutoff_frequency() const;
 
             /**
              * @brief Get the sampling time.
              *
              * @return float The sampling time.
              */
-            float get_sampling_time();
+            float get_sampling_time() const;
 
             /**
              * @brief Set the cutoff frequency.
