@@ -36,7 +36,7 @@ namespace roboost
              * @param kd The derivative gain.
              * @param max_expected_sampling_time The maximum expected sampling time.
              */
-            PIDController(double kp, double ki, double kd, double max_expected_sampling_time, double max_integral,
+            PIDController(double kp, double ki, double kd, double max_integral, roboost::filters::Filter& derivative_filter,
                           roboost::timing::TimingService& timing_service = roboost::timing::TimingService::get_instance());
 
             /**
@@ -76,18 +76,32 @@ namespace roboost
             double get_kd() const;
 
             /**
-             * @brief Get the maximum expected sampling time.
-             *
-             * @return double The maximum expected sampling time.
-             */
-            double get_max_expected_sampling_time() const;
-
-            /**
              * @brief Get the maximum integral.
              *
              * @return double The maximum integral.
              */
             double get_max_integral() const;
+
+            /**
+             * @brief Get the integral.
+             *
+             * @return double The integral.
+             */
+            double get_integral() const;
+
+            /**
+             * @brief Get the derivative term.
+             *
+             * @return double The derivative term.
+             */
+            double get_derivative() const;
+
+            /**
+             * @brief Get the previous error.
+             *
+             * @return double The previous error.
+             */
+            double get_previous_error() const;
 
             /**
              * @brief Set the proportional gain.
@@ -133,7 +147,7 @@ namespace roboost
             double integral_;
             double previous_error_;
             roboost::timing::TimingService& timing_service_;
-            roboost::filters::LowPassFilter derivative_filter_;
+            roboost::filters::Filter& derivative_filter_;
         };
     } // namespace controllers
 } // namespace roboost

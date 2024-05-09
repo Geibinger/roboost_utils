@@ -13,10 +13,10 @@
 
 using namespace roboost::controllers;
 using namespace roboost::timing;
+using namespace roboost::filters;
 
-PIDController::PIDController(double kp, double ki, double kd, double max_expected_sampling_time, double max_integral, TimingService& timing_service)
-    : kp_(kp), ki_(ki), kd_(kd), max_expected_sampling_time_(max_expected_sampling_time), integral_(0.0), previous_error_(0.0),
-      derivative_filter_(1.0 / (1.0 + 2.0 * PI * kd * max_expected_sampling_time), max_expected_sampling_time), max_integral_(max_integral), timing_service_(timing_service)
+PIDController::PIDController(double kp, double ki, double kd, double max_integral, Filter& derivative_filter, TimingService& timing_service)
+    : kp_(kp), ki_(ki), kd_(kd), integral_(0.0), previous_error_(0.0), derivative_filter_(derivative_filter), max_integral_(max_integral), timing_service_(timing_service)
 {
 }
 
@@ -56,6 +56,14 @@ double PIDController::get_kp() const { return kp_; }
 double PIDController::get_ki() const { return ki_; }
 
 double PIDController::get_kd() const { return kd_; }
+
+double PIDController::get_max_integral() const { return max_integral_; }
+
+double PIDController::get_integral() const { return integral_; }
+
+double PIDController::get_derivative() const { return derivative_filter_.get_output(); }
+
+double PIDController::get_previous_error() const { return previous_error_; }
 
 void PIDController::set_kp(double kp) { kp_ = kp; }
 

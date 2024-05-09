@@ -8,7 +8,6 @@
  *
  * Correction focuses on ensuring that after a missed deadline the next task execution time is set properly.
  */
-
 #ifndef TIMING_HPP
 #define TIMING_HPP
 
@@ -25,11 +24,6 @@ inline unsigned long micros()
 }
 #endif
 
-#include <functional>
-#include <limits.h>
-#include <roboost/utils/logging.hpp>
-#include <vector>
-
 #define TIMING_MS_TO_US(milliseconds) ((milliseconds)*1000LL)
 #define TIMING_US_TO_MS(microseconds) ((microseconds) / 1000LL)
 #define TIMING_S_TO_US(seconds) ((seconds)*1000000LL)
@@ -40,18 +34,20 @@ inline unsigned long micros()
 
 #define MICROS_TO_SECONDS_DOUBLE(microseconds) ((double)(microseconds) / 1000000.0)
 
+#include <functional>
+#include <limits.h>
+#include <roboost/utils/logging.hpp>
+#include <vector>
+
 namespace roboost
 {
     namespace timing
     {
-
         class Task
         {
             friend class TimingService;
 
         public:
-            Task() : callback_(nullptr), interval_(0), timeout_(0), lastScheduledRun_(0), name_(""), missed_deadlines_(0) {}
-
             Task(std::function<void()> callback, unsigned long interval, unsigned long timeout, const char* name)
                 : callback_(callback), interval_(interval), timeout_(timeout), lastScheduledRun_(micros()), name_(name), missed_deadlines_(0)
             {
@@ -65,7 +61,6 @@ namespace roboost
                     callback_();
                     unsigned long endTime = micros();
 
-                    // Update lastScheduledRun_ before checking if the task execution was on time
                     if (endTime - lastScheduledRun_ > interval_)
                     {
                         lastScheduledRun_ = endTime;
@@ -75,13 +70,8 @@ namespace roboost
                         lastScheduledRun_ += interval_;
                     }
 
-                    // Check if task execution exceeded its timeout
                     if (endTime - startTime > timeout_)
                     {
-                        // Optionally, log the timeout exceedance
-                        // Serial.println("Task execution time exceeded timeout.");
-
-                        // Increment missed deadlines safely
                         missed_deadlines_ = (missed_deadlines_ == UINT32_MAX) ? 0 : missed_deadlines_ + 1;
                     }
                 }
@@ -98,19 +88,63 @@ namespace roboost
             uint32_t missed_deadlines_;
         };
 
+#ifdef UNIT_TEST
+        // MockTimingService for unit testing
         class TimingService
         {
         public:
-            TimingService(const TimingService&) = delete;
-            TimingService& operator=(const TimingService&) = delete;
+            static TimingService& get_instance(roboost::logging::Logger& logger)
+            {
+                static TimingService instance(logger);
+                return instance;
+            }
 
+            void reset() { lastUpdateTime_ = micros(); }
+
+            void update()
+            {
+                lastUpdateTime_ += deltaTime_;
+                updateTasks(lastUpdateTime_);
+            }
+
+            void setDeltaTime(unsigned long deltaTime) { deltaTime_ = deltaTime; }
+
+            unsigned long getDeltaTime() const { return deltaTime_; }
+
+        private:
+            TimingService(roboost::logging::Logger& logger) : lastUpdateTime_(0), deltaTime_(TIMING_MS_TO_US(10)), logger_(logger) {}
+            unsigned long lastUpdateTime_;
+            unsigned long deltaTime_;
+            std::vector<Task> tasks_;
+            roboost::logging::Logger& logger_;
+
+            void updateTasks(unsigned long currentTime)
+            {
+                for (auto& task : tasks_)
+                {
+                    task.update(currentTime);
+                }
+            }
+        };
+#else
+        class TimingService
+        {
+        private:
+            unsigned long lastUpdateTime_;
+            unsigned long deltaTime_;
+            std::vector<Task> tasks_;
+            roboost::logging::Logger* logger_; // Use pointer for logger to ensure flexibility
+
+            TimingService() : lastUpdateTime_(0), deltaTime_(0), logger_(nullptr) {}
+
+        public:
             static TimingService& get_instance()
             {
                 static TimingService instance;
                 return instance;
             }
 
-            void reset() { lastUpdateTime_ = micros(); }
+            void setLogger(roboost::logging::Logger& logger) { this->logger_ = &logger; }
 
             void update()
             {
@@ -120,15 +154,9 @@ namespace roboost
                 updateTasks(currentTime);
             }
 
-            void addTask(std::function<void()> callback, unsigned long interval, unsigned long timeout, const char* name) { tasks_.emplace_back(callback, interval, timeout, name); }
-
-            void addTask(Task task) { tasks_.push_back(task); }
-
             unsigned long getDeltaTime() const { return deltaTime_; }
 
         private:
-            TimingService() : lastUpdateTime_(0), deltaTime_(0), logger_(roboost::logging::ConsoleLogger::getInstance()) {}
-
             void updateTasks(unsigned long currentTime)
             {
                 for (auto& task : tasks_)
@@ -136,30 +164,8 @@ namespace roboost
                     task.update(currentTime);
                 }
             }
-
-            unsigned long lastUpdateTime_;
-            std::vector<Task> tasks_;
-            unsigned long deltaTime_;
-            roboost::logging::Logger& logger_;
         };
-
-        /**
-         * @brief Measure the execution time of a function.
-         *
-         * @tparam Func The function type.
-         * @tparam Args The argument types.
-         * @param func The function to be measured.
-         * @param args The arguments to be passed to the function.
-         * @return unsigned long The execution time in microseconds.
-         */
-        template <typename Func, typename... Args>
-        unsigned long measureExecutionTime(Func func, Args&&... args)
-        {
-            unsigned long startTime = micros();
-            func(std::forward<Args>(args)...);
-            unsigned long endTime = micros();
-            return endTime - startTime;
-        }
+#endif
 
     } // namespace timing
 } // namespace roboost

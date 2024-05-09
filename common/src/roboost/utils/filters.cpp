@@ -13,12 +13,14 @@
 
 using namespace roboost::filters;
 
-LowPassFilter::LowPassFilter(float cutoff_frequency, float sampling_time) : cutoff_frequency_(cutoff_frequency), sampling_time_(sampling_time)
+LowPassFilter::LowPassFilter(double cutoff_frequency, double sampling_time) : cutoff_frequency_(cutoff_frequency), sampling_time_(sampling_time)
 {
     alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
+    output_ = 0.0f;
+    // time_constant_ = 1.0f / (2.0f * PI * cutoff_frequency_);
 }
 
-float LowPassFilter::update(float input)
+double LowPassFilter::update(double input)
 {
     output_ = alpha_ * input + (1.0f - alpha_) * output_;
     return output_;
@@ -26,17 +28,17 @@ float LowPassFilter::update(float input)
 
 void LowPassFilter::reset() { output_ = 0.0f; }
 
-float LowPassFilter::get_cutoff_frequency() const { return cutoff_frequency_; }
+double LowPassFilter::get_cutoff_frequency() const { return cutoff_frequency_; }
 
-float LowPassFilter::get_sampling_time() const { return sampling_time_; }
+double LowPassFilter::get_sampling_time() const { return sampling_time_; }
 
-void LowPassFilter::set_cutoff_frequency(float cutoff_frequency)
+void LowPassFilter::set_cutoff_frequency(double cutoff_frequency)
 {
     cutoff_frequency_ = cutoff_frequency;
     alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
 }
 
-void LowPassFilter::set_sampling_time(float sampling_time)
+void LowPassFilter::set_sampling_time(double sampling_time)
 {
     sampling_time_ = sampling_time;
     alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
@@ -44,24 +46,26 @@ void LowPassFilter::set_sampling_time(float sampling_time)
 
 MovingAverageFilter::MovingAverageFilter(int window_size) : window_size_(window_size) {}
 
-float MovingAverageFilter::update(float input)
+double MovingAverageFilter::update(double input)
 {
     input_history_.push_front(input);
 
     if (input_history_.size() > window_size_)
         input_history_.pop_back();
 
-    float sum = 0.0f;
-    for (float value : input_history_)
+    double sum = 0.0f;
+    for (double value : input_history_)
         sum += value;
 
     output_ = sum / input_history_.size();
     return output_;
 }
 
+void MovingAverageFilter::reset() { input_history_.clear(); }
+
 MedianFilter::MedianFilter(int window_size) : window_size_(window_size) {}
 
-float MedianFilter::update(float input)
+double MedianFilter::update(double input)
 {
     input_history_.push_front(input);
 
@@ -78,10 +82,14 @@ float MedianFilter::update(float input)
     return output_;
 }
 
-ExponentialMovingAverageFilter::ExponentialMovingAverageFilter(float alpha) : alpha_(alpha) {}
+void MedianFilter::reset() { input_history_.clear(); }
 
-float ExponentialMovingAverageFilter::update(float input)
+ExponentialMovingAverageFilter::ExponentialMovingAverageFilter(double alpha) : alpha_(alpha) {}
+
+double ExponentialMovingAverageFilter::update(double input)
 {
     output_ = alpha_ * input + (1.0f - alpha_) * output_;
     return output_;
 }
+
+void ExponentialMovingAverageFilter::reset() { output_ = 0.0f; }

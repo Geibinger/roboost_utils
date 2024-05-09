@@ -40,44 +40,53 @@ namespace roboost
         class SerialLogger : public Logger
         {
         private:
-            usb_serial_class& serial;
+            HardwareSerial* serial;
 
-            // Private constructor
-            SerialLogger(usb_serial_class& serial) : serial(serial) {}
-
-            // Prevent copying and assignment
-            SerialLogger(const SerialLogger&) = delete;
-            SerialLogger& operator=(const SerialLogger&) = delete;
+            SerialLogger() : serial(nullptr) {}
 
         public:
-            static SerialLogger& getInstance(usb_serial_class& serial)
+            static SerialLogger& getInstance()
             {
-                static SerialLogger instance(serial);
+                static SerialLogger instance;
                 return instance;
             }
 
+            void setSerial(HardwareSerial& serial) { this->serial = &serial; }
+
             void info(const std::string& message) override
             {
-                serial.print("[INFO] ");
-                serial.println(message);
+                if (serial)
+                {
+                    serial->print("[INFO] ");
+                    serial->println(message.c_str());
+                }
             }
 
-            void warn(const String& message) override
+            void warn(const std::string& message) override
             {
-                serial.print("[WARN] ");
-                serial.println(message);
+                if (serial)
+                {
+                    serial->print("[WARN] ");
+                    serial->println(message.c_str());
+                }
             }
 
             void error(const std::string& message) override
             {
-                serial.print("[ERROR] ");
-                serial.println(message);
+                if (serial)
+                {
+                    serial->print("[ERROR] ");
+                    serial->println(message.c_str());
+                }
             }
 
             void debug(const std::string& message) override
             {
-                serial.print("[DEBUG] ");
-                serial.println(message);
+                if (serial)
+                {
+                    serial->print("[DEBUG] ");
+                    serial->println(message.c_str());
+                }
             }
         };
 #else

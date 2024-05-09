@@ -31,15 +31,32 @@ namespace roboost
              * @brief Update the filter.
              *
              * @param input The input value.
-             * @return float The filtered value.
+             * @return double The filtered value.
              */
-            virtual float update(float input) = 0;
+            virtual double update(double input) = 0;
+
+            /**
+             * @brief Reset the filter.
+             *
+             */
+            virtual void reset() = 0;
+
+            double get_output() const { return output_; }
+
+        protected:
+            double output_;
         };
 
         class NoFilter : public Filter
         {
         public:
-            float update(float input) { return input; }
+            double update(double input)
+            {
+                output_ = input;
+                return output_;
+            }
+
+            void reset() {}
         };
 
         /**
@@ -56,15 +73,15 @@ namespace roboost
              * @param cutoff_frequency The cutoff frequency of the filter.
              * @param sampling_time The sampling time of the filter.
              */
-            LowPassFilter(float cutoff_frequency, float sampling_time);
+            LowPassFilter(double cutoff_frequency, double sampling_time);
 
             /**
              * @brief Update the filter.
              *
              * @param input The input value.
-             * @return float The filtered value.
+             * @return double The filtered value.
              */
-            float update(float input);
+            double update(double input);
 
             /**
              * @brief Reset the filter.
@@ -75,36 +92,35 @@ namespace roboost
             /**
              * @brief Get the cutoff frequency.
              *
-             * @return float The cutoff frequency.
+             * @return double The cutoff frequency.
              */
-            float get_cutoff_frequency() const;
+            double get_cutoff_frequency() const;
 
             /**
              * @brief Get the sampling time.
              *
-             * @return float The sampling time.
+             * @return double The sampling time.
              */
-            float get_sampling_time() const;
+            double get_sampling_time() const;
 
             /**
              * @brief Set the cutoff frequency.
              *
              * @param cutoff_frequency The cutoff frequency.
              */
-            void set_cutoff_frequency(float cutoff_frequency);
+            void set_cutoff_frequency(double cutoff_frequency);
 
             /**
              * @brief Set the sampling time.
              *
              * @param sampling_time The sampling time.
              */
-            void set_sampling_time(float sampling_time);
+            void set_sampling_time(double sampling_time);
 
         private:
-            float cutoff_frequency_;
-            float sampling_time_;
-            float alpha_;
-            float output_;
+            double cutoff_frequency_;
+            double sampling_time_;
+            double alpha_;
         };
 
         /**
@@ -125,14 +141,19 @@ namespace roboost
              * @brief Update the filter.
              *
              * @param input The input value.
-             * @return float The filtered value.
+             * @return double The filtered value.
              */
-            float update(float input);
+            double update(double input);
+
+            /**
+             * @brief Reset the filter.
+             *
+             */
+            void reset();
 
         private:
-            std::deque<float> input_history_;
+            std::deque<double> input_history_;
             int window_size_;
-            float output_;
         };
 
         /**
@@ -153,14 +174,19 @@ namespace roboost
              * @brief Update the filter.
              *
              * @param input The input value.
-             * @return float The filtered value.
+             * @return double The filtered value.
              */
-            float update(float input);
+            double update(double input);
+
+            /**
+             * @brief Reset the filter.
+             *
+             */
+            void reset();
 
         private:
-            std::deque<float> input_history_;
+            std::deque<double> input_history_;
             int window_size_;
-            float output_;
         };
 
         /**
@@ -176,19 +202,48 @@ namespace roboost
              *
              * @param alpha The alpha value of the filter.
              */
-            ExponentialMovingAverageFilter(float alpha);
+            ExponentialMovingAverageFilter(double alpha);
 
             /**
              * @brief Update the filter.
              *
              * @param input The input value.
-             * @return float The filtered value.
+             * @return double The filtered value.
              */
-            float update(float input);
+            double update(double input);
+
+            /**
+             * @brief Reset the filter.
+             *
+             */
+            void reset();
 
         private:
-            float alpha_;
-            float output_;
+            double alpha_;
+        };
+
+        class RateLimitingFilter
+        {
+        public:
+            RateLimitingFilter(double max_rate_per_second, double update_rate) : max_increment_(max_rate_per_second / update_rate), current_setpoint_(0.0) {}
+
+            double update(double target, double current_position)
+            {
+                double increment = target - current_setpoint_;
+                // Limit the increment to the maximum allowed step
+                increment = std::max(std::min(increment, max_increment_), -max_increment_);
+                current_setpoint_ += increment;
+
+                // Optional: add smoothing or further processing here
+                // TODO: add smoothing
+                return current_setpoint_;
+            }
+
+            void reset() { current_setpoint_ = 0.0; }
+
+        private:
+            double max_increment_;
+            double current_setpoint_;
         };
 
     } // namespace filters
