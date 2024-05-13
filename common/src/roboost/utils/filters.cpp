@@ -9,13 +9,14 @@
  *
  */
 
+#include <math.h>
 #include <roboost/utils/filters.hpp>
 
 using namespace roboost::filters;
 
 LowPassFilter::LowPassFilter(double cutoff_frequency, double sampling_time) : cutoff_frequency_(cutoff_frequency), sampling_time_(sampling_time)
 {
-    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
+    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (M_2_PI * cutoff_frequency_));
     output_ = 0.0f;
     // time_constant_ = 1.0f / (2.0f * PI * cutoff_frequency_);
 }
@@ -35,13 +36,13 @@ double LowPassFilter::get_sampling_time() const { return sampling_time_; }
 void LowPassFilter::set_cutoff_frequency(double cutoff_frequency)
 {
     cutoff_frequency_ = cutoff_frequency;
-    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
+    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (M_2_PI * cutoff_frequency_));
 }
 
 void LowPassFilter::set_sampling_time(double sampling_time)
 {
     sampling_time_ = sampling_time;
-    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (2.0f * PI * cutoff_frequency_));
+    alpha_ = sampling_time_ / (sampling_time_ + 1.0f / (M_2_PI * cutoff_frequency_));
 }
 
 MovingAverageFilter::MovingAverageFilter(int window_size) : window_size_(window_size) {}

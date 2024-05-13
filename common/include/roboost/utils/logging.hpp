@@ -40,7 +40,11 @@ namespace roboost
         class SerialLogger : public Logger
         {
         private:
-            HardwareSerial* serial;
+#ifdef TEENSYDUINO
+            usb_serial_class* serial; // For Teensy
+#else
+            HardwareSerial* serial; // For ESP32 and other Arduino platforms
+#endif
 
             SerialLogger() : serial(nullptr) {}
 
@@ -51,7 +55,11 @@ namespace roboost
                 return instance;
             }
 
+#ifdef TEENSYDUINO
+            void setSerial(usb_serial_class& serial) { this->serial = &serial; }
+#else
             void setSerial(HardwareSerial& serial) { this->serial = &serial; }
+#endif
 
             void info(const std::string& message) override
             {

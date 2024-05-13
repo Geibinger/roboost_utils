@@ -12,9 +12,8 @@
 #ifndef CONTROLLERS_H
 #define CONTROLLERS_H
 
-#include <roboost/utils/constants.h>
+#include <roboost/utils/callback_scheduler.hpp>
 #include <roboost/utils/filters.hpp>
-#include <roboost/utils/timing.hpp>
 
 namespace roboost
 {
@@ -36,8 +35,7 @@ namespace roboost
              * @param kd The derivative gain.
              * @param max_expected_sampling_time The maximum expected sampling time.
              */
-            PIDController(double kp, double ki, double kd, double max_integral, roboost::filters::Filter& derivative_filter,
-                          roboost::timing::TimingService& timing_service = roboost::timing::TimingService::get_instance());
+            PIDController(double kp, double ki, double kd, double max_integral, roboost::filters::Filter& derivative_filter, roboost::timing::CallbackScheduler* timing_service = nullptr);
 
             /**
              * @brief Update the controller.
@@ -146,7 +144,7 @@ namespace roboost
             double max_integral_;
             double integral_;
             double previous_error_;
-            roboost::timing::TimingService& timing_service_;
+            roboost::timing::CallbackScheduler* timing_service_;
             roboost::filters::Filter& derivative_filter_;
         };
     } // namespace controllers

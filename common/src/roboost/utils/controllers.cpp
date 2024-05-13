@@ -10,19 +10,20 @@
  */
 
 #include <roboost/utils/controllers.hpp>
+#include <roboost/utils/time_macros.hpp>
 
 using namespace roboost::controllers;
 using namespace roboost::timing;
 using namespace roboost::filters;
 
-PIDController::PIDController(double kp, double ki, double kd, double max_integral, Filter& derivative_filter, TimingService& timing_service)
+PIDController::PIDController(double kp, double ki, double kd, double max_integral, Filter& derivative_filter, CallbackScheduler* timing_service)
     : kp_(kp), ki_(ki), kd_(kd), integral_(0.0), previous_error_(0.0), derivative_filter_(derivative_filter), max_integral_(max_integral), timing_service_(timing_service)
 {
 }
 
 double PIDController::update(double setpoint, double input)
 {
-    double dt = MICROS_TO_SECONDS_DOUBLE(timing_service_.getDeltaTime());
+    double dt = MICROS_TO_SECONDS_DOUBLE(timing_service_->getDeltaTime());
     double error = setpoint - input;
 
     integral_ += error * dt;
