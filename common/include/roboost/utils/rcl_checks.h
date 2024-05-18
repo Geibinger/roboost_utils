@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2023
  *
  */
+
 #ifndef RCL_CHECKS_H
 #define RCL_CHECKS_H
 
@@ -22,19 +23,25 @@ namespace roboost
     {
         using namespace roboost::logging;
 
-        inline void error_loop(Logger& logger) // Pass logger as a parameter
+        template <typename LoggerType>
+        inline void error_loop(LoggerType& logger)
         {
             while (true)
             {
-                logger.error("Error in rcl function"); // Use logger instead of Serial
+                logger.error("Error in rcl function");
+#ifdef ESP32
                 digitalWrite(LED_BUILTIN, HIGH);
                 delay(500);
                 digitalWrite(LED_BUILTIN, LOW);
                 delay(500);
+#elif defined(TEENSYDUINO)
+                // Not implemented
+#endif
             }
         }
 
-        bool performInitializationWithFeedback(Logger& logger, std::function<rcl_ret_t()> initFunction)
+        template <typename LoggerType>
+        bool performInitializationWithFeedback(LoggerType& logger, std::function<rcl_ret_t()> initFunction)
         {
             while (true)
             {
@@ -92,7 +99,7 @@ namespace roboost
                 }
 
                 logger.error("Going into error state. Press reset to restart.");
-                error_loop(logger); // Pass logger to error_loop
+                error_loop(logger);
             }
         }
 

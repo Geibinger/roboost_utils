@@ -1,66 +1,73 @@
 /**
- * @file RTOSTaskManager.hpp
+ * @file TaskManager.hpp
  * @author Jakob Friedl
- * @brief RTOS task management and watchdog timer functionality.
+ * @brief Task management functionality using ChibiOS/RT on Teensy and FreeRTOS on ESP32.
  * @version 0.1
  * @date 2023-10-08
- * @copyright Copyright (c) 2023
  */
 
-#ifndef RTOS_TASK_MANAGER_HPP
-#define RTOS_TASK_MANAGER_HPP
+#ifndef TASK_MANAGER_HPP
+#define TASK_MANAGER_HPP
 
+#include <roboost/utils/logging.hpp>
+#include <vector>
+
+#ifdef ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/timers.h>
-#include <roboost/utils/logging.hpp>
-#include <vector>
+#elif defined(TEENSYDUINO)
+#include "ChRt.h"
+#endif
 
 namespace roboost
 {
     namespace timing
     {
 
-        class RTOSTaskManager
+        class TaskManager
         {
-            std::vector<TaskHandle_t> tasks_;
-            std::vector<TimerHandle_t> timers_;
+            std::vector<void*> tasks_;
             roboost::logging::Logger& logger_;
 
-            // Private constructor for singleton
-            explicit RTOSTaskManager(roboost::logging::Logger& logger) : logger_(logger) {}
+            TaskManager() : logger_(roboost::logging::Logger::get_instance()) {}
 
         public:
-            // Deleted copy constructor and assignment operator to prevent multiple instances
-            RTOSTaskManager(const RTOSTaskManager&) = delete;
-            RTOSTaskManager& operator=(const RTOSTaskManager&) = delete;
+            TaskManager(const TaskManager&) = delete;
+            TaskManager& operator=(const TaskManager&) = delete;
 
-            static RTOSTaskManager& get_instance(roboost::logging::Logger& logger)
+            static TaskManager& get_instance()
             {
-                static RTOSTaskManager instance(logger);
+                static TaskManager instance;
                 return instance;
             }
-
-            void createTask(void (*taskFunction)(void*), const char* name, uint16_t stackSize = 2048, void* parameters = nullptr, UBaseType_t priority = 1)
+#ifdef TEENSYDUINO
+            void create_task(void(taskFunction)(void), const char* name, int stackSize){
+#elif ESP32
+            void create_task(TaskFunction_t taskFunction, const char* name, uint16_t stackSize = 2048, void* parameters = nullptr, UBaseType_t priority = 1)
             {
                 TaskHandle_t taskHandle = nullptr;
                 xTaskCreate(taskFunction, name, stackSize, parameters, priority, &taskHandle);
                 tasks_.push_back(taskHandle);
+                logger_.debug("Task created: " + std::string(name));
             }
+#endif
 
-            void createTimer(const char* name, unsigned long period_ms, UBaseType_t autoReload, void* timerId, TimerCallbackFunction_t timerCallback)
-            {
-                TimerHandle_t timerHandle = xTimerCreate("Timer", pdMS_TO_TICKS(period_ms), autoReload, timerId, timerCallback);
-                timers_.push_back(timerHandle);
-                xTimerStart(timerHandle, 0);
-            }
+                void delete_task(void* taskHandle){
+#ifdef TEENSYDUINO
+                    chThdTerminate((thread_t*)taskHandle); // Correctly terminate the thread
+            chThdWait((thread_t*)taskHandle);              // Wait for the thread to finish
+            auto it = std::find(tasks_.begin(), tasks_.end(), taskHandle);
+            if (it != tasks_.end())
+                tasks_.erase(it);
+#elif ESP32
+                vTaskDelete((TaskHandle_t)taskHandle);
+#endif
+            logger_.debug("Task deleted");
+        }
+    }; // namespace timing
 
-            void deleteTask(TaskHandle_t taskHandle) { vTaskDelete(taskHandle); }
-
-            void deleteTimer(TimerHandle_t timerHandle) { xTimerDelete(timerHandle, portMAX_DELAY); }
-        };
-
-    } // namespace timing
+} // namespace roboost
 } // namespace roboost
 
-#endif // RTOS_TASK_MANAGER_HPP
+#endif // TASK_MANAGER_HPP

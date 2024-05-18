@@ -1,153 +1,89 @@
 /**
  * @file controllers.hpp
- * @author Jakob Friedl (friedl.jak@gmail.com)
  * @brief Utility functions and classes for controllers.
- * @version 0.1
- * @date 2023-10-08
- *
- * @copyright Copyright (c) 2023
+ * @version 0.2
+ * @date 2024-05-17
  *
  */
 
 #ifndef CONTROLLERS_H
 #define CONTROLLERS_H
 
+#include <functional>
 #include <roboost/utils/callback_scheduler.hpp>
 #include <roboost/utils/filters.hpp>
 
-namespace roboost
+namespace roboost::controllers
 {
-    namespace controllers
+    template <typename Derived, typename T>
+    class ControllerBase
     {
-        /**
-         * @brief PID controller class.
-         * TODO: add anti-windup, gain scheduling, and output max/min
-         *
-         */
-        class PIDController
+    public:
+        T update(T setpoint, T input) { return static_cast<Derived*>(this)->update(setpoint, input); }
+
+        void reset() { static_cast<Derived*>(this)->reset(); }
+
+        T get_output() const { return static_cast<const Derived*>(this)->get_output(); }
+
+    protected:
+        T output_;
+    };
+
+    template <typename T, typename Filter>
+    class PIDController : public ControllerBase<PIDController<T, Filter>, T>
+    {
+    public:
+        PIDController(T kp, T ki, T kd, T max_integral, Filter& derivative_filter)
+            : kp_(kp), ki_(ki), kd_(kd), max_integral_(max_integral), integral_(T(0)), previous_error_(T(0)), derivative_filter_(derivative_filter)
         {
-        public:
-            /**
-             * @brief Construct a new PIDController object
-             *
-             * @param kp The proportional gain.
-             * @param ki The integral gain.
-             * @param kd The derivative gain.
-             * @param max_expected_sampling_time The maximum expected sampling time.
-             */
-            PIDController(double kp, double ki, double kd, double max_integral, roboost::filters::Filter& derivative_filter, roboost::timing::CallbackScheduler* timing_service = nullptr);
+        }
 
-            /**
-             * @brief Update the controller.
-             *
-             * @param setpoint The setpoint.
-             * @param input The input value.
-             * @return double The output value.
-             */
-            double update(double setpoint, double input);
+        T update(T setpoint, T input)
+        {
+            T error = setpoint - input;
+            integral_ += error;
+            integral_ = std::clamp(integral_, -max_integral_, max_integral_);
 
-            /**
-             * @brief Reset the controller.
-             *
-             */
-            void reset();
+            T derivative = derivative_filter_.update(error - previous_error_);
+            previous_error_ = error;
 
-            /**
-             * @brief Get the proportional gain.
-             *
-             * @return double The proportional gain.
-             */
-            double get_kp() const;
+            this->output_ = kp_ * error + ki_ * integral_ + kd_ * derivative;
+            return this->output_;
+        }
 
-            /**
-             * @brief Get the integral gain.
-             *
-             * @return double The integral gain.
-             */
-            double get_ki() const;
+        void reset()
+        {
+            integral_ = T(0);
+            previous_error_ = T(0);
+            derivative_filter_.reset();
+        }
 
-            /**
-             * @brief Get the derivative gain.
-             *
-             * @return double The derivative gain.
-             */
-            double get_kd() const;
+        T get_output() const { return this->output_; }
 
-            /**
-             * @brief Get the maximum integral.
-             *
-             * @return double The maximum integral.
-             */
-            double get_max_integral() const;
+        // Getters and Setters
+        T get_kp() const { return kp_; }
+        T get_ki() const { return ki_; }
+        T get_kd() const { return kd_; }
+        T get_max_integral() const { return max_integral_; }
+        T get_integral() const { return integral_; }
+        T get_derivative() const { return derivative_filter_.get_output(); }
+        T get_previous_error() const { return previous_error_; }
 
-            /**
-             * @brief Get the integral.
-             *
-             * @return double The integral.
-             */
-            double get_integral() const;
+        void set_kp(T kp) { kp_ = kp; }
+        void set_ki(T ki) { ki_ = ki; }
+        void set_kd(T kd) { kd_ = kd; }
+        void set_max_integral(T max_integral) { max_integral_ = max_integral; }
 
-            /**
-             * @brief Get the derivative term.
-             *
-             * @return double The derivative term.
-             */
-            double get_derivative() const;
+    private:
+        T kp_;
+        T ki_;
+        T kd_;
+        T max_integral_;
+        T integral_;
+        T previous_error_;
+        Filter& derivative_filter_;
+    };
 
-            /**
-             * @brief Get the previous error.
-             *
-             * @return double The previous error.
-             */
-            double get_previous_error() const;
-
-            /**
-             * @brief Set the proportional gain.
-             *
-             * @param kp The proportional gain.
-             */
-            void set_kp(double kp);
-
-            /**
-             * @brief Set the integral gain.
-             *
-             * @param ki The integral gain.
-             */
-            void set_ki(double ki);
-
-            /**
-             * @brief Set the derivative gain.
-             *
-             * @param kd The derivative gain.
-             */
-            void set_kd(double kd);
-
-            /**
-             * @brief Set the maximum expected sampling time.
-             *
-             * @param max_expected_sampling_time The maximum expected sampling time.
-             */
-            void set_max_expected_sampling_time(double max_expected_sampling_time);
-
-            /**
-             * @brief Set the maximum integral.
-             *
-             * @param max_integral The maximum integral.
-             */
-            void set_max_integral(double max_integral);
-
-        private:
-            double kp_;
-            double ki_;
-            double kd_;
-            double max_expected_sampling_time_;
-            double max_integral_;
-            double integral_;
-            double previous_error_;
-            roboost::timing::CallbackScheduler* timing_service_;
-            roboost::filters::Filter& derivative_filter_;
-        };
-    } // namespace controllers
-} // namespace roboost
+} // namespace roboost::controllers
 
 #endif // CONTROLLERS_H

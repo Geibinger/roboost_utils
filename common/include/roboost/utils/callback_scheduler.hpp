@@ -7,6 +7,8 @@
  * @copyright Copyright (c) 2023
  */
 
+// TODO: Add documentation
+
 #ifndef CALLBACK_SCHEDULER_HPP
 #define CALLBACK_SCHEDULER_HPP
 
@@ -14,59 +16,51 @@
 #include <roboost/utils/logging.hpp>
 #include <vector>
 
-namespace roboost
+namespace roboost::timing
 {
-    namespace timing
+    class CallbackScheduler
     {
+    public:
+        CallbackScheduler(const CallbackScheduler&) = delete;
+        CallbackScheduler& operator=(const CallbackScheduler&) = delete;
 
-        class CallbackScheduler
+        static CallbackScheduler& get_instance()
         {
-            std::vector<IntervalCallback> callbacks_;
-            roboost::logging::Logger& logger_;
-            unsigned long lastUpdateTime_;
-            unsigned long deltaTime_;
+            static CallbackScheduler instance;
+            return instance;
+        }
 
-            // Private constructor for singleton
-            explicit CallbackScheduler(roboost::logging::Logger& logger) : logger_(logger), lastUpdateTime_(0), deltaTime_(0) {}
+        unsigned long get_delta_time() const { return deltaTime_; }
 
-        public:
-            // Deleted copy constructor and assignment operator to prevent multiple instances
-            CallbackScheduler(const CallbackScheduler&) = delete;
-            CallbackScheduler& operator=(const CallbackScheduler&) = delete;
+        unsigned long getLastUpdateTime() const { return lastUpdateTime_; }
 
-            static CallbackScheduler& get_instance(roboost::logging::Logger& logger)
+        void update()
+        {
+            unsigned long currentTime = micros();
+            deltaTime_ = (currentTime < lastUpdateTime_) ? (ULONG_MAX - lastUpdateTime_ + currentTime) : (currentTime - lastUpdateTime_);
+            lastUpdateTime_ = currentTime;
+            update_callbacks(currentTime);
+        }
+
+        void add_callback(std::function<void()> callback, unsigned long interval, unsigned long timeout, const char* name) { callbacks_.emplace_back(callback, interval, timeout, name); }
+
+        void add_callback(IntervalCallback callback) { callbacks_.push_back(callback); }
+
+    private:
+        CallbackScheduler() : logger_(roboost::logging::Logger::get_instance()), lastUpdateTime_(0), deltaTime_(0) {}
+        void update_callbacks(unsigned long currentTime)
+        {
+            for (auto& callback : callbacks_)
             {
-                static CallbackScheduler instance(logger);
-                return instance;
+                callback.update(currentTime);
             }
+        }
 
-            unsigned long getDeltaTime() const { return deltaTime_; }
-
-            unsigned long getLastUpdateTime() const { return lastUpdateTime_; }
-
-            void update()
-            {
-                unsigned long currentTime = micros();
-                deltaTime_ = (currentTime < lastUpdateTime_) ? (ULONG_MAX - lastUpdateTime_ + currentTime) : (currentTime - lastUpdateTime_);
-                lastUpdateTime_ = currentTime;
-                updateCallbacks(currentTime);
-            }
-
-            void addCallback(std::function<void()> callback, unsigned long interval, unsigned long timeout, const char* name) { callbacks_.emplace_back(callback, interval, timeout, name); }
-
-            void addCallback(IntervalCallback callback) { callbacks_.push_back(callback); }
-
-        private:
-            void updateCallbacks(unsigned long currentTime)
-            {
-                for (auto& callback : callbacks_)
-                {
-                    callback.update(currentTime);
-                }
-            }
-        };
-
-    } // namespace timing
-} // namespace roboost
+        std::vector<IntervalCallback> callbacks_;
+        roboost::logging::Logger& logger_;
+        unsigned long lastUpdateTime_;
+        unsigned long deltaTime_;
+    };
+} // namespace roboost::timing
 
 #endif // CALLBACK_SCHEDULER_HPP

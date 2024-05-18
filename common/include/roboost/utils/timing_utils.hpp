@@ -16,12 +16,12 @@
 #else
 #include <chrono>
 // Define micros for non-Arduino platforms if not already defined
-inline unsigned long micros()
-{
-    static auto start = std::chrono::high_resolution_clock::now();
-    auto now = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now - start).count();
-}
+// inline unsigned long micros()
+// {
+//     static auto start = std::chrono::high_resolution_clock::now();
+//     auto now = std::chrono::high_resolution_clock::now();
+//     return std::chrono::duration_cast<std::chrono::microseconds>(now - start).count();
+// }
 #endif
 
 namespace roboost
