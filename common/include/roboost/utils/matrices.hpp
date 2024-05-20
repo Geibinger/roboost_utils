@@ -1,79 +1,121 @@
-/**
- * @file matrices.hpp
- * @author Jakob Friedl (friedl.j@gmail.com)
- * @brief Templated utility functions and classes for matrix operations.
- * @version 0.2
- * @date 2023-10-08
- *
- * Copyright (c) 2023 Jakob Friedl
- *
- */
+#ifndef MATRICES_HPP
+#define MATRICES_HPP
 
-#ifndef MATRICES_H
-#define MATRICES_H
-
-#include <vector>
-// TODO: Use pre allocated memory for vectors and matrices
+#include <array>
 
 namespace roboost
 {
     namespace math
     {
-        // Template definitions for Vector and Matrix to handle any numeric type T
-        template <typename T>
-        using Vector = std::vector<T>;
 
-        template <typename T>
-        using Matrix = std::vector<Vector<T>>;
+        // Define vector and matrix types
+        template <std::size_t N>
+        using Vector = std::array<float, N>;
 
-        // Operator overloads for matrix-vector multiplication
-        template <typename T>
-        Vector<T> operator*(const Matrix<T>& m, const Vector<T>& v)
+        template <std::size_t Rows, std::size_t Cols>
+        using Matrix = std::array<std::array<float, Cols>, Rows>;
+
+        // initialize a matrix with zeros
+        template <std::size_t Rows, std::size_t Cols>
+        Matrix<Rows, Cols> zeros()
         {
-            if (m.empty() || m[0].size() != v.size())
-            {
-                // throw std::invalid_argument("Matrix and vector dimensions must match.");
-                // Consider logging or more specific error handling here
-                // TODO: Add logging
-            }
+            Matrix<Rows, Cols> mat = {0};
+            return mat;
+        }
 
-            Vector<T> result(m.size(), 0);
-            for (std::size_t i = 0; i < m.size(); ++i)
+        // initialize a vector with zeros
+        template <std::size_t N>
+        Vector<N> zeros()
+        {
+            Vector<N> vec = {0};
+            return vec;
+        }
+
+        // Matrix-vector multiplication
+        template <std::size_t Rows, std::size_t Cols>
+        Vector<Rows> multiply(const Matrix<Rows, Cols>& mat, const Vector<Cols>& vec)
+        {
+            Vector<Rows> result = {0};
+            for (std::size_t i = 0; i < Rows; ++i)
             {
-                for (std::size_t j = 0; j < v.size(); ++j)
+                for (std::size_t j = 0; j < Cols; ++j)
                 {
-                    result[i] += m[i][j] * v[j];
+                    result[i] += mat[i][j] * vec[j];
                 }
             }
             return result;
         }
 
-        // Operator overload for vector-scalar multiplication
-        template <typename T>
-        Vector<T> operator*(const Vector<T>& v, T scalar)
+        // Matrix-matrix multiplication
+        template <std::size_t Rows, std::size_t Cols, std::size_t Inner>
+        Matrix<Rows, Cols> multiply(const Matrix<Rows, Inner>& mat1, const Matrix<Inner, Cols>& mat2)
         {
-            Vector<T> result(v.size());
-            for (std::size_t i = 0; i < v.size(); ++i)
+            Matrix<Rows, Cols> result = {0};
+            for (std::size_t i = 0; i < Rows; ++i)
             {
-                result[i] = v[i] * scalar;
+                for (std::size_t j = 0; j < Cols; ++j)
+                {
+                    for (std::size_t k = 0; k < Inner; ++k)
+                    {
+                        result[i][j] += mat1[i][k] * mat2[k][j];
+                    }
+                }
             }
             return result;
         }
 
-        // Utility functions for creating zero-initialized vectors and matrices
-        template <typename T>
-        Vector<T> ZeroVector(std::size_t size)
+        // Scale a vector by a scalar
+        template <std::size_t N>
+        Vector<N> scale(const Vector<N>& vec, float scalar)
         {
-            return Vector<T>(size, T(0));
+            Vector<N> result;
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                result[i] = vec[i] * scalar;
+            }
+            return result;
         }
 
-        template <typename T>
-        Matrix<T> ZeroMatrix(std::size_t size_x, std::size_t size_y)
+        // Add two vectors
+        template <std::size_t N>
+        Vector<N> add(const Vector<N>& vec1, const Vector<N>& vec2)
         {
-            return Matrix<T>(size_x, Vector<T>(size_y, T(0)));
+            Vector<N> result;
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                result[i] = vec1[i] + vec2[i];
+            }
+            return result;
+        }
+
+        // Subtract two vectors
+        template <std::size_t N>
+        Vector<N> subtract(const Vector<N>& vec1, const Vector<N>& vec2)
+        {
+            Vector<N> result;
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                result[i] = vec1[i] - vec2[i];
+            }
+            return result;
+        }
+
+        // Transpose a matrix
+        template <std::size_t Rows, std::size_t Cols>
+        Matrix<Cols, Rows> transpose(const Matrix<Rows, Cols>& mat)
+        {
+            Matrix<Cols, Rows> result = {0};
+            for (std::size_t i = 0; i < Rows; ++i)
+            {
+                for (std::size_t j = 0; j < Cols; ++j)
+                {
+                    result[j][i] = mat[i][j];
+                }
+            }
+            return result;
         }
 
     } // namespace math
 } // namespace roboost
 
-#endif // MATRICES_H
+#endif // MATRICES_HPP
