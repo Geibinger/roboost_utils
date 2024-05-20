@@ -19,7 +19,11 @@ namespace roboost
     namespace comparisons
     {
         // Method to check if two floats are approximately equal
-        bool approx_equal(float a, float b, float epsilon) { return std::abs(a - b) < epsilon; }
+        template <typename T>
+        bool approx_equal(T a, T b, T epsilon = std::numeric_limits<T>::epsilon())
+        {
+            return std::abs(a - b) < epsilon;
+        }
     } // namespace comparisons
 } // namespace roboost
 

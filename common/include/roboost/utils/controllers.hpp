@@ -16,7 +16,7 @@
 namespace roboost::controllers
 {
     template <typename Derived, typename T>
-    class ControllerBase
+    class Controller
     {
     public:
         T update(T setpoint, T input) { return static_cast<Derived*>(this)->update(setpoint, input); }
@@ -30,7 +30,7 @@ namespace roboost::controllers
     };
 
     template <typename T, typename Filter>
-    class PIDController : public ControllerBase<PIDController<T, Filter>, T>
+    class PIDController : public Controller<PIDController<T, Filter>, T>
     {
     public:
         PIDController(T kp, T ki, T kd, T max_integral, Filter& derivative_filter)
@@ -44,10 +44,15 @@ namespace roboost::controllers
             integral_ += error;
             integral_ = std::clamp(integral_, -max_integral_, max_integral_);
 
-            T derivative = derivative_filter_.update(error - previous_error_);
+            T update_frequency = timing::CallbackScheduler::get_instance().get_update_frequency();
+            T derivative = 0;
+            if (update_frequency > 0)
+            {
+                derivative = derivative_filter_.update((error - previous_error_) * update_frequency);
+            }
             previous_error_ = error;
 
-            this->output_ = kp_ * error + ki_ * integral_ + kd_ * derivative;
+            this->output_ = (kp_ * error + (ki_ * integral_ / update_frequency) + kd_ * derivative);
             return this->output_;
         }
 
@@ -81,6 +86,66 @@ namespace roboost::controllers
         T max_integral_;
         T integral_;
         T previous_error_;
+        Filter& derivative_filter_;
+    };
+
+    template <typename Filter>
+    class FastPIDController : public Controller<FastPIDController<Filter>, int32_t>
+    {
+    public:
+        FastPIDController(int32_t kp, int32_t ki, int32_t kd, int32_t max_integral, Filter& derivative_filter)
+            : kp_(kp), ki_(ki), kd_(kd), max_integral_(max_integral), integral_(0), previous_error_(0), derivative_filter_(derivative_filter)
+        {
+        }
+
+        int32_t update(int32_t setpoint, int32_t input)
+        {
+            int32_t error = setpoint - input;
+            integral_ += error;
+            integral_ = std::clamp(integral_, -max_integral_, max_integral_);
+
+            uint32_t update_frequency = timing::CallbackScheduler::get_instance().get_update_frequency();
+            int32_t derivative = 0;
+            if (update_frequency > 0)
+            {
+                derivative = derivative_filter_.update((error - previous_error_) * update_frequency);
+            }
+            previous_error_ = error;
+
+            // Calculate the PID output using integer arithmetic
+            this->output_ = (kp_ * error + (ki_ * integral_ / update_frequency) + kd_ * derivative) / SCALE_FACTOR;
+            return this->output_;
+        }
+
+        void reset()
+        {
+            integral_ = 0;
+            previous_error_ = 0;
+        }
+
+        int32_t get_output() const { return this->output_; }
+        int32_t get_kp() const { return kp_; }
+        int32_t get_ki() const { return ki_; }
+        int32_t get_kd() const { return kd_; }
+        int32_t get_max_integral() const { return max_integral_; }
+        int32_t get_integral() const { return integral_; }
+        int32_t get_derivative() const { return derivative_filter_.get_output(); }
+        int32_t get_previous_error() const { return previous_error_; }
+
+        void set_kp(int32_t kp) { kp_ = kp; }
+        void set_ki(int32_t ki) { ki_ = ki; }
+        void set_kd(int32_t kd) { kd_ = kd; }
+        void set_max_integral(int32_t max_integral) { max_integral_ = max_integral; }
+
+    private:
+        static constexpr int32_t SCALE_FACTOR = 1 << 10; // 2^10 = 1024
+
+        int32_t kp_; // Proportional gain -> 2^10 times the typical value
+        int32_t ki_;
+        int32_t kd_;
+        int32_t max_integral_;
+        int32_t integral_;
+        int32_t previous_error_;
         Filter& derivative_filter_;
     };
 

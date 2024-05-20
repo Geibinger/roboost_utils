@@ -8,7 +8,6 @@
  */
 
 // TODO: Add documentation
-
 #ifndef CALLBACK_SCHEDULER_HPP
 #define CALLBACK_SCHEDULER_HPP
 
@@ -18,6 +17,38 @@
 
 namespace roboost::timing
 {
+#ifdef UNIT_TEST
+    class TestCallbackScheduler
+    {
+    public:
+        static TestCallbackScheduler& get_instance()
+        {
+            static TestCallbackScheduler instance;
+            return instance;
+        }
+
+        uint32_t get_delta_time() const { return 10; }
+
+        uint32_t get_update_frequency() const { return 1000000 / 10; }
+
+        uint32_t get_last_update_time() const { return 0; }
+
+        void update()
+        {
+            // No update logic needed for the test scheduler
+        }
+
+        void add_callback(std::function<void()> callback, uint32_t interval, uint32_t timeout, const char* name) { callbacks_.emplace_back(callback, interval, timeout, name); }
+
+        void add_callback(IntervalCallback callback) { callbacks_.push_back(callback); }
+
+    private:
+        TestCallbackScheduler() = default;
+
+        std::vector<IntervalCallback> callbacks_;
+    };
+    using CallbackScheduler = TestCallbackScheduler;
+#else
     class CallbackScheduler
     {
     public:
@@ -30,37 +61,40 @@ namespace roboost::timing
             return instance;
         }
 
-        unsigned long get_delta_time() const { return deltaTime_; }
+        uint32_t get_delta_time() const { return delta_time_; }
 
-        unsigned long getLastUpdateTime() const { return lastUpdateTime_; }
+        uint32_t get_update_frequency() const { return 1000000 / delta_time_; }
+
+        uint32_t get_last_update_time() const { return last_update_time_; }
 
         void update()
         {
-            unsigned long currentTime = micros();
-            deltaTime_ = (currentTime < lastUpdateTime_) ? (ULONG_MAX - lastUpdateTime_ + currentTime) : (currentTime - lastUpdateTime_);
-            lastUpdateTime_ = currentTime;
+            uint32_t currentTime = micros();
+            delta_time_ = (currentTime < last_update_time_) ? (ULONG_MAX - last_update_time_ + currentTime) : (currentTime - last_update_time_);
+            last_update_time_ = currentTime;
             update_callbacks(currentTime);
         }
 
-        void add_callback(std::function<void()> callback, unsigned long interval, unsigned long timeout, const char* name) { callbacks_.emplace_back(callback, interval, timeout, name); }
+        void add_callback(std::function<void()> callback, uint32_t interval, uint32_t timeout, const char* name) { callbacks_.emplace_back(callback, interval, timeout, name); }
 
         void add_callback(IntervalCallback callback) { callbacks_.push_back(callback); }
 
     private:
-        CallbackScheduler() : logger_(roboost::logging::Logger::get_instance()), lastUpdateTime_(0), deltaTime_(0) {}
-        void update_callbacks(unsigned long currentTime)
+        CallbackScheduler() : logger_(roboost::logging::Logger::get_instance()), last_update_time_(0), delta_time_(0) {}
+        void update_callbacks(uint32_t current_time)
         {
             for (auto& callback : callbacks_)
             {
-                callback.update(currentTime);
+                callback.update(current_time);
             }
         }
 
         std::vector<IntervalCallback> callbacks_;
         roboost::logging::Logger& logger_;
-        unsigned long lastUpdateTime_;
-        unsigned long deltaTime_;
+        uint32_t last_update_time_;
+        uint32_t delta_time_;
     };
+#endif
 } // namespace roboost::timing
 
 #endif // CALLBACK_SCHEDULER_HPP
