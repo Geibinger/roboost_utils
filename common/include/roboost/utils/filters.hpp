@@ -93,6 +93,8 @@ namespace roboost::filters
     class ChainedFilter : public FilterBase<T>
     {
     public:
+        ChainedFilter() {}
+
         void addFilter(std::unique_ptr<FilterBase<T>> filter) { filters_.push_back(std::move(filter)); }
 
         T update(T input) override

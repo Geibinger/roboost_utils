@@ -17,6 +17,6 @@
 #define TIMING_MS_TO_S(milliseconds) ((milliseconds) / 1000.0)
 #define TIMING_S_TO_MS(seconds) ((seconds)*1000.0)
 #define TIMING_MS_TO_NS(milliseconds) ((milliseconds)*1000000LL)
-#define MICROS_TO_SECONDS_DOUBLE(microseconds) ((double)(microseconds) / 1000000.0)
+#define TIMING_US_TO_S_DOUBLE(microseconds) ((double)(microseconds) / 1000000.0)
 
 #endif // TIME_MACROS_HPP
